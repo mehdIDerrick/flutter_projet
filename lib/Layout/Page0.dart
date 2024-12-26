@@ -21,16 +21,19 @@ class Page0State extends State<Page0> {
   List<Map<String, dynamic>> aggregatedEntities = [];
   List<String> entityTypeNames = [];
   List<String> selectedEntityTypeNames = [];
+  List<Map<String, dynamic>> filteredEntities = [];
+  TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadDataFromLocalStorage();
+    _filterEntities;
     // Set the preferred orientations to portrait only
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
+    // Set the preferred orientations to portrait only
+    // Apply search initially.
+    SystemChrome.setPreferredOrientations(
+        [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
   }
 
   @override
@@ -43,19 +46,18 @@ class Page0State extends State<Page0> {
       DeviceOrientation.landscapeRight,
     ]);
     super.dispose();
+    // Set the preferred orientations to portrait only
   }
 
   Future<void> _loadDataFromLocalStorage() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? jsonData = prefs.getString('salesData');
     String systemDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
     String? salesDatatime = prefs.getString('salesDatatime');
     print(salesDatatime);
 
     if (jsonData != null && salesDatatime == systemDate) {
       List<dynamic> decodedData = jsonDecode(jsonData);
-
       Map<String, Map<String, dynamic>> entityMap = {};
       Set<String> entityTypesSet = {};
 
@@ -77,10 +79,7 @@ class Page0State extends State<Page0> {
         entityTypesSet.add(entityTypeName);
       }
 
-      // Convert the map back to a list of maps
       List<Map<String, dynamic>> aggregatedList = entityMap.values.toList();
-
-      // Sort the aggregated list by nbr_transaction in descending order
       aggregatedList
           .sort((a, b) => b['nbr_transaction'].compareTo(a['nbr_transaction']));
 
@@ -105,7 +104,6 @@ class Page0State extends State<Page0> {
       String systemDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
       prefs.setString('salesDatatime', systemDate);
 
-      // Aggregate the data by entity_name and entity_type_name
       Map<String, Map<String, dynamic>> entityMap = {};
       Set<String> entityTypesSet = {};
 
@@ -127,13 +125,10 @@ class Page0State extends State<Page0> {
         entityTypesSet.add(entityTypeName);
       }
 
-      // Convert the map back to a list of maps
       List<Map<String, dynamic>> aggregatedList = entityMap.values.toList();
-
-      // Sort the aggregated list by nbr_transaction in descending order
       aggregatedList
           .sort((a, b) => b['nbr_transaction'].compareTo(a['nbr_transaction']));
-      print(prefs.getStringList('selectedEntityTypeNames'));
+
       setState(() {
         aggregatedEntities = aggregatedList;
         loading = false;
@@ -149,11 +144,33 @@ class Page0State extends State<Page0> {
     }
   }
 
+  void _filterEntities(String query) {
+    final filteredList = aggregatedEntities.where((entity) {
+      bool matchesSearch =
+          entity['entity_name'].toLowerCase().contains(query.toLowerCase()) ||
+              entity['nbr_transaction'].toString().contains(query);
+      bool matchesFilter = selectedEntityTypeNames.isEmpty ||
+          selectedEntityTypeNames.contains(entity['entity_type_name']);
+      return matchesSearch && matchesFilter;
+    }).toList();
+
+    setState(() {
+      filteredEntities = filteredList;
+    });
+  }
+
   List<Map<String, dynamic>> getFilteredEntities() {
     return aggregatedEntities.where((entity) {
+      bool matchesSearch = _searchController.text.isEmpty ||
+          entity['entity_name']
+              .toLowerCase()
+              .contains(_searchController.text.toLowerCase()) ||
+          entity['nbr_transaction'].toString().contains(_searchController.text);
+
       bool entityTypeCondition = selectedEntityTypeNames.isEmpty ||
           selectedEntityTypeNames.contains(entity['entity_type_name']);
-      return entityTypeCondition;
+
+      return matchesSearch && entityTypeCondition;
     }).toList();
   }
 
@@ -174,6 +191,23 @@ class Page0State extends State<Page0> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _filterEntities,
+                  decoration: InputDecoration(
+                    hintText: 'Search by entity name ...',
+                    prefixIcon: Icon(Icons.search, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15.0),
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                ),
+              ),
               Content(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -191,7 +225,7 @@ class Page0State extends State<Page0> {
                             }
                           });
                           _saveSelectedFilters(
-                              selectedEntityTypeNames); // Save filters when tapped
+                              selectedEntityTypeNames); // Save filters
                         },
                         child: Container(
                           padding: EdgeInsets.symmetric(
@@ -235,80 +269,161 @@ class Page0State extends State<Page0> {
                       ? Center(child: CircularProgressIndicator())
                       : Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: getFilteredEntities()
-                              .asMap()
-                              .entries
-                              .map((entry) {
-                            int idx = entry.key;
-                            var entity = entry.value;
-                            return Container(
-                              margin: const EdgeInsets.symmetric(vertical: 5.0),
-                              padding: const EdgeInsets.all(10.0),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CircleAvatar(
-                                    backgroundColor: idx == 0
-                                        ? Color.fromARGB(223, 255, 115, 34)
-                                        : Colors.grey[400],
-                                    child: Text('${idx + 1}',
-                                        style: TextStyle(color: Colors.white)),
-                                  ),
-                                  SizedBox(width: 10.0),
-                                  Expanded(
-                                    child: Column(
+                          children: filteredEntities.isEmpty
+                              ? aggregatedEntities.asMap().entries.map((entry) {
+                                  int idx = entry.key;
+                                  var entity = entry.value;
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 5.0),
+                                    padding: const EdgeInsets.all(10.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ),
+                                    child: Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          entity['entity_name'] ?? 'Unknown',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16.0,
+                                        CircleAvatar(
+                                          backgroundColor: idx == 0
+                                              ? Color.fromARGB(
+                                                  223, 255, 115, 34)
+                                              : Colors.grey[400],
+                                          child: Text('${idx + 1}',
+                                              style: TextStyle(
+                                                  color: Colors.white)),
+                                        ),
+                                        SizedBox(width: 10.0),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                entity['entity_name'] ??
+                                                    'Unknown',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16.0,
+                                                ),
+                                              ),
+                                              SizedBox(height: 5.0),
+                                              Text(
+                                                  'Nbr Transaction: ${entity['nbr_transaction']}'),
+                                            ],
                                           ),
                                         ),
-                                        SizedBox(height: 5.0),
-                                        Text(
-                                            'Nbr Transaction: ${entity['nbr_transaction']}'),
+                                        SizedBox(width: 8.0),
+                                        GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    PageChartDetailedPerf(
+                                                        entityName: entity[
+                                                            'entity_name']),
+                                              ),
+                                            );
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8.0),
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.arrow_forward,
+                                                size: 30.0,
+                                                color: Color.fromARGB(
+                                                    223, 255, 115, 34),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
-                                  ),
-                                  SizedBox(
-                                      width: 8.0), // Adjust the width as needed
-                                  GestureDetector(
-                                    onTap: () {
-                                      // Navigate to PageChartDetailedPerf when the arrow is tapped
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              PageChartDetailedPerf(
-                                                  entityName:
-                                                      entity['entity_name']),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8.0),
-                                      child: Center(
-                                        child: Icon(
-                                          Icons.arrow_forward,
-                                          size: 30.0,
-                                          color:
-                                              Color.fromARGB(223, 255, 115, 34),
-                                        ),
-                                      ),
+                                  );
+                                }).toList()
+                              : getFilteredEntities()
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
+                                  int idx = entry.key;
+                                  var entity = entry.value;
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 5.0),
+                                    padding: const EdgeInsets.all(10.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(10.0),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        CircleAvatar(
+                                          backgroundColor: idx == 0
+                                              ? Color.fromARGB(
+                                                  223, 255, 115, 34)
+                                              : Colors.grey[400],
+                                          child: Text('${idx + 1}',
+                                              style: TextStyle(
+                                                  color: Colors.white)),
+                                        ),
+                                        SizedBox(width: 10.0),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                entity['entity_name'] ??
+                                                    'Unknown',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16.0,
+                                                ),
+                                              ),
+                                              SizedBox(height: 5.0),
+                                              Text(
+                                                  'Nbr Transaction: ${entity['nbr_transaction']}'),
+                                            ],
+                                          ),
+                                        ),
+                                        SizedBox(
+                                            width:
+                                                8.0), // Adjust the width as needed
+                                        GestureDetector(
+                                          onTap: () {
+                                            // Navigate to PageChartDetailedPerf when the arrow is tapped
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    PageChartDetailedPerf(
+                                                        entityName: entity[
+                                                            'entity_name']),
+                                              ),
+                                            );
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8.0),
+                                            child: Center(
+                                              child: Icon(
+                                                Icons.arrow_forward,
+                                                size: 30.0,
+                                                color: Color.fromARGB(
+                                                    223, 255, 115, 34),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
                         ),
                 ],
               ),

@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:my_dash/Layout/CustomSearch.dart';
 import 'package:my_dash/Layout/Page0.dart';
 import 'package:my_dash/Layout/PageChartJson.dart';
-import 'package:my_dash/Layout/Page3.dart';
 import 'package:provider/provider.dart';
-import 'package:my_dash/Layout/Profile.dart';
-import 'package:my_dash/Layout/InAppNotification.dart';
-import 'package:my_dash/Layout/PageChatBot.dart';
 import 'package:flutter/services.dart'; // Import for controlling screen orientation
 
 class PageA extends StatefulWidget {
@@ -96,19 +92,6 @@ class _PageAState extends State<PageA> with SingleTickerProviderStateMixin {
             ),
           ),
           IconButton(
-            onPressed: () {
-              // Navigate to the profile page when the button is pressed
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
-              );
-            },
-            icon: Icon(
-              Icons.person,
-              color: themeProvider.isDarkMode ? Colors.white : Colors.black,
-            ),
-          ),
-          IconButton(
             onPressed: () async {
               // Show the search bar and wait for the user to input a query
               String? result = await showSearch<String?>(
@@ -138,7 +121,7 @@ class _PageAState extends State<PageA> with SingleTickerProviderStateMixin {
             children: [
               Page2(),
               Page0(),
-              Page3(),
+//              Page3(),
             ],
           ),
           // if (isNotificationVisible)
@@ -180,18 +163,18 @@ class _PageAState extends State<PageA> with SingleTickerProviderStateMixin {
                   ? const Color.fromARGB(223, 255, 115, 34)
                   : (themeProvider.isDarkMode ? Colors.white : Colors.black),
             ),
-            TabsIcon(
-              icon: Icons.pie_chart,
-              iconColor: currentPage == 2
-                  ? const Color.fromARGB(223, 255, 115, 34)
-                  : (themeProvider.isDarkMode ? Colors.white : Colors.black),
-            ),
-            TabsIcon(
-              icon: Icons.chat,
-              iconColor: currentPage == 3
-                  ? const Color.fromARGB(223, 255, 115, 34)
-                  : (themeProvider.isDarkMode ? Colors.white : Colors.black),
-            ),
+            // TabsIcon(
+            //   icon: Icons.pie_chart,
+            //   iconColor: currentPage == 2
+            //       ? const Color.fromARGB(223, 255, 115, 34)
+            //       : (themeProvider.isDarkMode ? Colors.white : Colors.black),
+            // ),
+            // TabsIcon(
+            //   icon: Icons.chat,
+            //   iconColor: currentPage == 3
+            //       ? const Color.fromARGB(223, 255, 115, 34)
+            //       : (themeProvider.isDarkMode ? Colors.white : Colors.black),
+            // ),
           ],
         ),
       ),

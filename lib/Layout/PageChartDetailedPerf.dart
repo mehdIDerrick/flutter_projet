@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:my_dash/Layout/Profile.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:my_dash/services/activation_client_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:flutter/services.dart'; // Import for controlling screen orientation
 
 class PageChartDetailedPerf extends StatefulWidget {
@@ -435,31 +431,15 @@ class _PageChartDetailedPerfState extends State<PageChartDetailedPerf> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              // Navigate to the profile page when the button is pressed
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfilePage()),
-              );
-            },
-            icon: Icon(
-              Icons.person,
-              color: Colors.black,
-            ),
-          ),
-        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               // Add vertical scrolling
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Unselect all button
-
                   Container(
                     padding: EdgeInsets.all(8.0),
                     child: Column(
@@ -612,7 +592,7 @@ class _PageChartDetailedPerfState extends State<PageChartDetailedPerf> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Date de Transaction:',
+                          'Date de Activation:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
@@ -715,134 +695,7 @@ class _PageChartDetailedPerfState extends State<PageChartDetailedPerf> {
                       ],
                     ),
                   ),
-                  // Pie Chart
-                  // Container(
-                  //   height: 300, // Increase the height of the pie chart
-                  //   child: SfCircularChart(
-                  //     title: ChartTitle(
-                  //       text: "Valeurs de transaction et d'activation par date",
-                  //       textStyle: TextStyle(
-                  //         fontWeight: FontWeight.bold,
-                  //         color: Colors.black,
-                  //       ),
-                  //     ),
-                  //     legend: Legend(
-                  //       isVisible: true,
-                  //       overflowMode: LegendItemOverflowMode.wrap,
-                  //     ),
-                  //     series: <CircularSeries<_PieData, String>>[
-                  //       PieSeries<_PieData, String>(
-                  //         dataSource: getPieChartData(),
-                  //         xValueMapper: (_PieData data, _) => data.xData,
-                  //         yValueMapper: (_PieData data, _) => data.value,
-                  //         dataLabelMapper: (_PieData data, _) =>
-                  //             '${data.text}: ${data.value}',
-                  //         dataLabelSettings: DataLabelSettings(
-                  //           isVisible: true,
-                  //           textStyle: TextStyle(
-                  //             color: Colors
-                  //                 .black, // Set the color of the data labels to black
-                  //           ),
-                  //         ),
-                  //         pointColorMapper: (_PieData data, _) => data.color,
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                  // // Radial Gauge
-                  // Container(
-                  //   height: 300, // Adjusted height to accommodate the title
-                  //   child: Column(
-                  //     children: [
-                  //       Text(
-                  //         'Taux de conversion',
-                  //         style: TextStyle(
-                  //           fontSize: 18,
-                  //           fontWeight: FontWeight.bold,
-                  //         ),
-                  //       ),
-                  //       Expanded(
-                  //         child: SfRadialGauge(
-                  //           axes: <RadialAxis>[
-                  //             RadialAxis(
-                  //               minimum: 0,
-                  //               maximum: 100,
-                  //               startAngle: 180,
-                  //               endAngle: 0,
-                  //               ranges: <GaugeRange>[
-                  //                 GaugeRange(
-                  //                     startValue: 0,
-                  //                     endValue: 35,
-                  //                     color: Colors.red),
-                  //                 GaugeRange(
-                  //                     startValue: 35,
-                  //                     endValue: 70,
-                  //                     color: Colors.yellow),
-                  //                 GaugeRange(
-                  //                     startValue: 70,
-                  //                     endValue: 100,
-                  //                     color: Colors.green),
-                  //               ],
-                  //               pointers: <GaugePointer>[
-                  //                 NeedlePointer(
-                  //                     value: getRadialGaugeData().first.value),
-                  //               ],
-                  //               annotations: <GaugeAnnotation>[
-                  //                 GaugeAnnotation(
-                  //                   widget: Container(
-                  //                     child: Text(
-                  //                       '${getRadialGaugeData().first.value.toStringAsFixed(2)}%',
-                  //                       style: TextStyle(
-                  //                         fontSize: 16,
-                  //                         fontWeight: FontWeight.bold,
-                  //                       ),
-                  //                     ),
-                  //                   ),
-                  //                   angle: 0,
-                  //                   positionFactor: 0.5,
-                  //                 ),
-                  //               ],
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
 
-                  // Container(
-                  //   height: 300,
-                  //   child: SfCircularChart(
-                  //     title: ChartTitle(
-                  //       text: 'Taux de conversion VS Taux de non conversion',
-                  //       textStyle: TextStyle(
-                  //         fontWeight: FontWeight.bold,
-                  //         color: Colors.black,
-                  //       ),
-                  //     ),
-                  //     legend: Legend(
-                  //       isVisible: true,
-                  //       overflowMode: LegendItemOverflowMode.wrap,
-                  //     ),
-                  //     series: <CircularSeries<_DoughnutData, String>>[
-                  //       DoughnutSeries<_DoughnutData, String>(
-                  //         dataSource: getDoughnutChartData(),
-                  //         xValueMapper: (_DoughnutData data, _) => data.label,
-                  //         yValueMapper: (_DoughnutData data, _) => data.value,
-                  //         dataLabelMapper: (_DoughnutData data, _) =>
-                  //             ' ${data.value.toStringAsFixed(2)}%',
-                  //         dataLabelSettings: DataLabelSettings(
-                  //           isVisible: true,
-                  //           textStyle: TextStyle(
-                  //             color: Colors.black,
-                  //           ),
-                  //         ),
-                  //         pointColorMapper: (_DoughnutData data, _) =>
-                  //             data.color,
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
                   // Bar Chart
                   Container(
                     height: 300, // Increase the height of the bar chart
@@ -872,7 +725,7 @@ class _PageChartDetailedPerfState extends State<PageChartDetailedPerf> {
                           xValueMapper: (_BarData sales, _) => sales.date,
                           yValueMapper: (_BarData sales, _) =>
                               sales.nbrTransaction,
-                          name: 'Nbr Activation',
+                          name: 'Nbr Activation Weekly-1',
                           color: Colors.blue,
                         ),
                         ColumnSeries<_BarData, String>(
@@ -880,243 +733,11 @@ class _PageChartDetailedPerfState extends State<PageChartDetailedPerf> {
                           xValueMapper: (_BarData sales, _) => sales.date,
                           yValueMapper: (_BarData sales, _) =>
                               sales.nbrActivation,
-                          name: 'Nbr Activation',
+                          name: 'Nbr Activation Weekly',
                           color: Colors.orange,
                         ),
                       ],
                     ),
-                  ),
-
-                  Column(
-                    children: [
-                      // Fixed title
-                      Container(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          'Taux de conversion par jour',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      // Fixed legend
-                      Container(
-                        padding: EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.line_axis_sharp, color: Colors.green),
-                            SizedBox(width: 8),
-                            Text('Global Conversion Rate'),
-                          ],
-                        ),
-                      ),
-                      // Scrollable chart
-                      Container(
-                        height: 300,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Container(
-                            width: 800, // Adjust the width as needed
-                            child: SfCartesianChart(
-                              primaryXAxis: CategoryAxis(
-                                labelRotation:
-                                    -60, // Rotate labels to be vertical
-                                interval: 1, // Set the interval between labels
-                                desiredIntervals:
-                                    5, // Set desired intervals between labels
-                                labelIntersectAction: AxisLabelIntersectAction
-                                    .none, // Avoid label intersection
-                              ),
-                              primaryYAxis: NumericAxis(),
-                              tooltipBehavior: TooltipBehavior(enable: true),
-                              legend: Legend(
-                                  isVisible: true,
-                                  toggleSeriesVisibility: true),
-                              series: <CartesianSeries<dynamic, dynamic>>[
-                                LineSeries<_LineData, String>(
-                                  dataSource: getLineChartData(),
-                                  xValueMapper: (_LineData data, _) =>
-                                      data.date,
-                                  yValueMapper: (_LineData data, _) =>
-                                      data.value,
-                                  name: 'Global Conversion Rate',
-                                  color:
-                                      Colors.green, // Set line color to green
-                                  dataLabelMapper: (_LineData data, _) =>
-                                      '${(data.value * 10).toStringAsFixed(1)}%',
-                                  dataLabelSettings:
-                                      DataLabelSettings(isVisible: true),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Column(
-                    children: [
-                      // Fixed title
-                      Container(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          'Taux de  non conversion par jour',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      // Fixed legend
-                      Container(
-                        padding: EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.line_axis_sharp, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('No Conversion Rate'),
-                          ],
-                        ),
-                      ),
-                      // Scrollable chart
-                      Container(
-                        height: 300,
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Container(
-                            width: 800, // Adjust the width as needed
-                            child: SfCartesianChart(
-                              primaryXAxis: CategoryAxis(
-                                labelRotation:
-                                    -60, // Rotate labels to be vertical
-                                interval: 1, // Set the interval between labels
-                                desiredIntervals:
-                                    5, // Set desired intervals between labels
-                                labelIntersectAction: AxisLabelIntersectAction
-                                    .none, // Avoid label intersection
-                              ),
-                              primaryYAxis: NumericAxis(),
-                              tooltipBehavior: TooltipBehavior(enable: true),
-                              legend: Legend(
-                                  isVisible: true,
-                                  toggleSeriesVisibility: true),
-                              series: <CartesianSeries<dynamic, dynamic>>[
-                                LineSeries<_LineData, String>(
-                                  dataSource: getLineChartData(),
-                                  xValueMapper: (_LineData data, _) =>
-                                      data.date,
-                                  yValueMapper: (_LineData data, _) =>
-                                      (100 - (data.value * 10)),
-                                  name: 'No Conversion Rate',
-                                  color: Colors.red,
-                                  dataLabelMapper: (_LineData data, _) =>
-                                      '${(100 - (data.value * 10)).toStringAsFixed(1)}%',
-                                  dataLabelSettings:
-                                      DataLabelSettings(isVisible: true),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      ///Performance par seller
-                      Container(
-                        height: 300,
-                        child: SfCartesianChart(
-                          primaryXAxis: CategoryAxis(
-                            labelRotation: -60, // Rotate labels to be vertical
-                            interval: 1, // Set the interval between labels
-                            desiredIntervals:
-                                5, // Set desired intervals between labels
-                            labelIntersectAction: AxisLabelIntersectAction
-                                .none, // Avoid label intersection
-                          ),
-                          title: ChartTitle(
-                            text: 'Performance par seller',
-                            textStyle: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                          legend: Legend(
-                              isVisible: true,
-                              overflowMode: LegendItemOverflowMode.wrap),
-                          tooltipBehavior: TooltipBehavior(enable: true),
-                          series: <CartesianSeries>[
-                            ColumnSeries<_BarDataSellerid, String>(
-                              dataSource: getBarChartsellerId(),
-                              xValueMapper: (_BarDataSellerid data, _) =>
-                                  data.sellerId,
-                              yValueMapper: (_BarDataSellerid data, _) =>
-                                  data.nbrTransaction,
-                              name: 'Nbr Transaction',
-                              color: Colors.blue,
-                            ),
-                            ColumnSeries<_BarDataSellerid, String>(
-                              dataSource: getBarChartsellerId(),
-                              xValueMapper: (_BarDataSellerid data, _) =>
-                                  data.sellerId,
-                              yValueMapper: (_BarDataSellerid data, _) =>
-                                  data.nbrActivation,
-                              name: 'Nbr Activation',
-                              color: Colors.orange,
-                            ),
-                          ],
-                        ),
-                      ),
-
-//getLineChart by sellerId
-                      // Fixed title
-                      Container(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          'Taux de conversion par seller',
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-
-                      // Scrollable chart
-                      Container(
-                        height: 300,
-                        width:
-                            double.infinity, // Set to fill the available width
-                        child: SfCartesianChart(
-                          primaryXAxis: CategoryAxis(
-                            labelRotation: -60, // Rotate labels to be vertical
-                            interval: 1, // Set the interval between labels
-                            desiredIntervals:
-                                5, // Set desired intervals between labels
-                            labelIntersectAction: AxisLabelIntersectAction
-                                .none, // Avoid label intersection
-                          ),
-                          primaryYAxis: NumericAxis(),
-                          tooltipBehavior: TooltipBehavior(enable: true),
-                          legend: Legend(
-                            isVisible: true,
-                            toggleSeriesVisibility: true,
-                          ),
-                          zoomPanBehavior: ZoomPanBehavior(
-                            enablePanning: false, // Disable horizontal swipe
-                          ),
-                          series: <CartesianSeries<dynamic, dynamic>>[
-                            LineSeries<_LinesellerId, String>(
-                              dataSource: getLineChartsellerId(),
-                              xValueMapper: (_LinesellerId data, _) =>
-                                  data.sellerId, // Change to sellerId
-                              yValueMapper: (_LinesellerId data, _) =>
-                                  data.value,
-                              name: 'Global Conversion Rate',
-                              color: Colors.green, // Set line color to green
-                              dataLabelMapper: (_LinesellerId data, _) =>
-                                  '${(data.value * 10).toStringAsFixed(1)}%',
-                              dataLabelSettings:
-                                  DataLabelSettings(isVisible: true),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

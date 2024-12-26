@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:my_dash/services/activation_client_api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:syncfusion_flutter_gauges/gauges.dart';
 import 'package:flutter/services.dart'; // Import for controlling screen orientation
 
 class Page2 extends StatefulWidget {
@@ -27,12 +26,15 @@ class Page2State extends State<Page2> {
   bool loading = true;
   String userRole = '';
   List<String> transactionMonths = [];
+  List<String> activationMonths = [];
+
   String? selectedMonth;
 
   @override
   void initState() {
     super.initState();
     _loadUserRole();
+    _loadDataFromLocalStorage();
     _loadSelectedFilters(); // Ajouter cette ligne pour charger les filtres sélectionnés
     // Set the preferred orientations to portrait only
     SystemChrome.setPreferredOrientations([
@@ -59,11 +61,20 @@ class Page2State extends State<Page2> {
         prefs.getString('selectedTransactionDates');
     List<String>? storedEntityTypeNames =
         prefs.getStringList('selectedEntityTypeNames');
+    String? selectedActivationDatesJson =
+        prefs.getString('selectedActivationDates');
 
     if (selectedTransactionDatesJson != null) {
       setState(() {
         selectedTransactionDates =
             jsonDecode(selectedTransactionDatesJson).cast<String>();
+      });
+    }
+
+    if (selectedActivationDatesJson != null) {
+      setState(() {
+        selectedActivationDates =
+            jsonDecode(selectedActivationDatesJson).cast<String>();
       });
     }
     if (storedEntityTypeNames != null) {
@@ -130,17 +141,28 @@ class Page2State extends State<Page2> {
       // Sélectionner les 7 dernières dates
       List<String> last7TransactionDates =
           distinctTransactionDates.take(7).toList();
+      // Obtenir les dates distinctes de transaction
+      List<String> distinctActivationDates =
+          activationDateList.toSet().toList();
 
+      // Trier les dates par ordre décroissant
+      distinctActivationDates.sort((a, b) => b.compareTo(a));
+
+      // Sélectionner les 7 dernières dates
+      List<String> last7ActivationDates =
+          distinctActivationDates.take(7).toList();
       setState(() {
         loading = false;
-        selectedActivationDates = [];
         selectedTransactionDates = last7TransactionDates;
+        selectedActivationDates = last7ActivationDates;
         selectedOfferNames = [];
         //selectedEntityTypeNames = userRole == 'restricted' ? ['FRANCHISE'] : [];
         selectedEntityTypeNames =
             prefs.getStringList('selectedEntityTypeNames') ?? [];
       });
+
       transactionMonths = extractMonths(transactionDateList);
+      activationMonths = extractMonths(activationDateList);
     } else {
       await fetchData();
     }
@@ -154,6 +176,77 @@ class Page2State extends State<Page2> {
       ApiService apiService = ApiService();
       List<dynamic> fetchedData = await apiService.fetchData();
       print(fetchedData);
+      data = fetchedData.map<_SalesData>((item) {
+        return _SalesData(
+          item['activation_date'] ?? '',
+          item['trnsaction_date'] ?? '',
+          item['tmcode'] ?? 0,
+          item['offer_name'] ?? '',
+          item['entity_type_name'] ?? '',
+          item['entity_name'] ?? '',
+          item['seller_id'] ?? '',
+          item['nbr_transaction'] ?? 0,
+          item['nbr_activation'] ?? 0,
+          item['taux_conversion_global'] ?? 0.0,
+        );
+      }).toList();
+      activationDateList =
+          data.map((salesData) => salesData.activationDate).toSet().toList();
+      transactionDateList =
+          data.map((salesData) => salesData.transactionDate).toSet().toList();
+      offerNames =
+          data.map((salesData) => salesData.offerName).toSet().toList();
+      entityTypeNames =
+          data.map((salesData) => salesData.entityTypeName).toSet().toList();
+
+      // Obtenir les dates distinctes de transaction
+      List<String> distinctTransactionDates =
+          transactionDateList.toSet().toList();
+
+      // Trier les dates par ordre décroissant
+      distinctTransactionDates.sort((a, b) => b.compareTo(a));
+
+      // Sélectionner les 7 dernières dates
+      List<String> last7TransactionDates =
+          distinctTransactionDates.take(7).toList();
+      // Obtenir les dates distinctes de transaction
+      List<String> distinctActivationDates =
+          activationDateList.toSet().toList();
+
+      // Trier les dates par ordre décroissant
+      distinctActivationDates.sort((a, b) => b.compareTo(a));
+
+      // Sélectionner les 7 dernières dates
+      List<String> last7ActivationDates =
+          distinctActivationDates.take(7).toList();
+      // Save data to local storage
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      prefs.setString('salesData', jsonEncode(fetchedData));
+      setState(() {
+        loading = false;
+        selectedTransactionDates = last7TransactionDates;
+        selectedActivationDates = last7ActivationDates;
+        selectedOfferNames = [];
+        //selectedEntityTypeNames = userRole == 'restricted' ? ['FRANCHISE'] : [];
+      });
+
+      // transactionMonths
+
+      activationMonths = extractMonths(activationDateList);
+    } catch (e) {
+      print("Error loading/processing data: $e");
+    }
+  }
+
+  Future<void> fetchDataC() async {
+    setState(() {
+      loading = true;
+    });
+    try {
+      ApiService apiService = ApiService();
+      List<dynamic> fetchedData = await apiService.fetchData();
+      print(fetchedData);
+
       data = fetchedData.map<_SalesData>((item) {
         return _SalesData(
           item['activation_date'] ?? '',
@@ -184,13 +277,16 @@ class Page2State extends State<Page2> {
       String systemDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
       prefs.setString('salesDatatime', systemDate);
       // Load saved filters
+
       selectedTransactionDates =
           prefs.getStringList('selectedTransactionDates') ?? [];
-      selectedEntityTypeNames = prefs.getStringList('entity_type_name') ?? [];
 
+      selectedEntityTypeNames = prefs.getStringList('entity_type_name') ?? [];
+      selectedActivationDates =
+          prefs.getStringList('selectedActivationDates') ?? [];
+      selectedEntityTypeNames = prefs.getStringList('entity_type_name') ?? [];
       setState(() {
         loading = false;
-        selectedActivationDates = [];
         if (selectedTransactionDates.isEmpty) {
           // Obtenir les dates distinctes de transaction
           List<String> distinctTransactionDates =
@@ -203,12 +299,27 @@ class Page2State extends State<Page2> {
           List<String> last7TransactionDates =
               distinctTransactionDates.take(7).toList();
         }
+
+        if (selectedActivationDates.isEmpty) {
+          // Obtenir les dates distinctes de transaction
+          List<String> distinctActivationDates =
+              activationDateList.toSet().toList();
+
+          // Trier les dates par ordre décroissant
+          distinctActivationDates.sort((a, b) => b.compareTo(a));
+
+          // Sélectionner les 7 dernières dates
+          List<String> last7ActivationDates =
+              distinctActivationDates.take(7).toList();
+        }
         selectedOfferNames = [];
         if (selectedEntityTypeNames.isEmpty && userRole == 'restricted') {
           selectedEntityTypeNames = ['FRANCHISE'];
         }
       });
-      transactionMonths = extractMonths(transactionDateList);
+      // transactionMonths
+
+      activationMonths = extractMonths(activationDateList);
     } catch (e) {
       print("Error loading/processing data: $e");
     }
@@ -262,18 +373,30 @@ class Page2State extends State<Page2> {
     Map<String, _BarData> barDataMap = {};
 
     for (var entry in filteredData) {
-      if (barDataMap.containsKey(entry.transactionDate)) {
-        barDataMap[entry.transactionDate]!.nbrTransaction +=
-            entry.nbrTransaction.toDouble();
-        barDataMap[entry.transactionDate]!.nbrActivation +=
+      if (barDataMap.containsKey(entry.activationDate)) {
+        barDataMap[entry.activationDate]!.nbrActivation +=
+            entry.nbrActivation.toDouble();
+        barDataMap[entry.activationDate]!.nbrActivation +=
             entry.nbrActivation.toDouble();
       } else {
-        barDataMap[entry.transactionDate] = _BarData(entry.transactionDate,
-            entry.nbrTransaction.toDouble(), entry.nbrActivation.toDouble());
+        barDataMap[entry.activationDate] = _BarData(entry.activationDate,
+            entry.nbrActivation.toDouble(), entry.nbrActivation.toDouble());
       }
     }
+    // List<_BarData> sortedBarData = barDataMap.values.toList();
 
-    return barDataMap.values.toList();
+    // sortedBarData.sort((a, b) => DateTime.parse(b.date)
+    //     .compareTo(DateTime.parse(a.date))); // Sort descending
+
+    // return sortedBarData;
+
+    // Convert map values to a list and sort by activationDate ascending
+    List<_BarData> sortedBarData = barDataMap.values.toList();
+    sortedBarData.sort((a, b) => DateTime.parse(a.date)
+        .compareTo(DateTime.parse(b.date))); // Sort ascending
+
+    return sortedBarData;
+    // return barDataMap.values.toList();
   }
 
   List<_RadialGaugeData> getRadialGaugeData() {
@@ -336,6 +459,10 @@ class Page2State extends State<Page2> {
       }
       groupedData[entry.entityTypeName]!.add(entry);
     }
+    groupedData.forEach((key, value) {
+      value.sort((a, b) => DateTime.parse(a.activationDate)
+          .compareTo(DateTime.parse(b.activationDate)));
+    });
 
     // Create a series for each `entityTypeName`
     return groupedData.entries.map((entry) {
@@ -388,13 +515,13 @@ class Page2State extends State<Page2> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Performance Boutique Vente:',
+              'Monitoring Activation:',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const Text(
-              'Mob PREP aux client Data',
+              'Activation',
               style: TextStyle(
                 fontSize: 14.0, // Adjust the size as needed
                 color: Colors.grey, // Adjust the color as needed
@@ -410,6 +537,8 @@ class Page2State extends State<Page2> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // "Refresh Data" Button with similar design
+                  // Spacer for margin between buttons
                   Container(
                     padding: EdgeInsets.all(8.0),
                     child: Column(
@@ -420,6 +549,40 @@ class Page2State extends State<Page2> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
+                              // Refresh Data button
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4.0),
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    await fetchData(); // Call the fetchDataC function
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color.fromARGB(
+                                        223, 255, 115, 34), // Text color
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          20.0), // Rounded corners
+                                    ),
+                                    side: BorderSide(
+                                        color: Colors.white,
+                                        width: 1.0), // Border color and width
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 20.0,
+                                        vertical: 10.0), // Button padding
+                                    minimumSize: Size(
+                                        120, 40), // Button size (width, height)
+                                  ),
+                                  child: Text(
+                                    'Refresh Data', // Button label
+                                    style: TextStyle(
+                                      color: Colors
+                                          .white, // Same color as selected buttons
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
                               // Clear button
                               Padding(
                                 padding:
@@ -434,14 +597,14 @@ class Page2State extends State<Page2> {
                                     });
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    foregroundColor: Colors.black,
-                                    backgroundColor: Colors.white, // Text color
+                                    backgroundColor: Color.fromARGB(
+                                        223, 255, 115, 34), // Text color
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(
                                           20.0), // Rounded corners
                                     ),
                                     side: BorderSide(
-                                        color: Colors.black,
+                                        color: Colors.white,
                                         width: 1.0), // Border color and width
                                     padding: EdgeInsets.symmetric(
                                         horizontal: 20.0,
@@ -450,8 +613,9 @@ class Page2State extends State<Page2> {
                                         120, 40), // Button size (width, height)
                                   ),
                                   child: Text(
-                                    'clear',
+                                    'Clear', // Button label
                                     style: TextStyle(
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                       fontSize:
                                           14, // Adjust the font size as needed
@@ -483,7 +647,7 @@ class Page2State extends State<Page2> {
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
-                            children: transactionMonths.map((month) {
+                            children: activationMonths.map((month) {
                               bool isSelected = selectedMonth == month;
                               return Padding(
                                 padding:
@@ -495,8 +659,8 @@ class Page2State extends State<Page2> {
                                         selectedMonth = null;
                                       } else {
                                         selectedMonth = month;
-                                        selectedTransactionDates =
-                                            transactionDateList
+                                        selectedActivationDates =
+                                            activationDateList
                                                 .where((date) =>
                                                     date.startsWith(month))
                                                 .toList();
@@ -506,12 +670,13 @@ class Page2State extends State<Page2> {
                                     SharedPreferences prefs =
                                         await SharedPreferences.getInstance();
                                     prefs.setStringList(
-                                        "selectedTransactionDates",
-                                        selectedTransactionDates);
+                                        "selectedActivationDates",
+                                        selectedActivationDates);
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        isSelected ? Colors.black : null,
+                                    backgroundColor: isSelected
+                                        ? Color.fromARGB(223, 255, 115, 34)
+                                        : null,
                                   ),
                                   child: Text(
                                     month,
@@ -538,7 +703,7 @@ class Page2State extends State<Page2> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Date de Transaction:',
+                          'Date de Activation:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
@@ -548,9 +713,11 @@ class Page2State extends State<Page2> {
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
-                            children: transactionDateList.map((date) {
+                            children: (activationDateList
+                                  ..sort((a, b) => a.compareTo(b)))
+                                .map((date) {
                               bool isSelected =
-                                  selectedTransactionDates.contains(date);
+                                  selectedActivationDates.contains(date);
                               return Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 4.0),
@@ -558,22 +725,23 @@ class Page2State extends State<Page2> {
                                   onPressed: () async {
                                     setState(() {
                                       if (isSelected) {
-                                        selectedTransactionDates.remove(date);
+                                        selectedActivationDates.remove(date);
                                       } else {
-                                        selectedTransactionDates.add(date);
+                                        selectedActivationDates.add(date);
                                       }
                                     });
 
                                     SharedPreferences prefs =
                                         await SharedPreferences.getInstance();
-                                    prefs.setString("selectedTransactionDates",
-                                        selectedTransactionDates.toString());
+                                    prefs.setString("selectedActivationDates",
+                                        selectedActivationDates.toString());
                                     print(
-                                        "selectedTransactionDates$selectedEntityTypeNames");
+                                        "selectedActivationDates$selectedEntityTypeNames");
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        isSelected ? Colors.black : null,
+                                    backgroundColor: isSelected
+                                        ? Color.fromARGB(223, 255, 115, 34)
+                                        : null,
                                   ),
                                   child: Text(
                                     date,
@@ -651,136 +819,32 @@ class Page2State extends State<Page2> {
                       ],
                     ),
                   ),
-                  // Pie Chart
-                  // Container(
-                  //   height: 300, // Increase the height of the pie chart
-                  //   child: SfCircularChart(
-                  //     title: ChartTitle(
-                  //       text: "Valeurs de transaction et d'activation par jour",
-                  //       textStyle: TextStyle(
-                  //         fontWeight: FontWeight.bold,
-                  //         color: Colors.black,
-                  //       ),
-                  //     ),
-                  //     legend: Legend(
-                  //       isVisible: true,
-                  //       overflowMode: LegendItemOverflowMode.wrap,
-                  //     ),
-                  //     series: <CircularSeries<_PieData, String>>[
-                  //       PieSeries<_PieData, String>(
-                  //         dataSource: getPieChartData(),
-                  //         xValueMapper: (_PieData data, _) => data.xData,
-                  //         yValueMapper: (_PieData data, _) => data.value,
-                  //         dataLabelMapper: (_PieData data, _) =>
-                  //             '${data.text}: ${data.value}',
-                  //         dataLabelSettings: DataLabelSettings(
-                  //           isVisible: true,
-                  //           textStyle: TextStyle(
-                  //             color: Colors
-                  //                 .black, // Set the color of the data labels to black
-                  //           ),
-                  //         ),
-                  //         pointColorMapper: (_PieData data, _) => data.color,
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                  // // Radial Gauge
-                  // Container(
-                  //   height: 300, // Adjusted height to accommodate the title
-                  //   child: Column(
-                  //     children: [
-                  //       Text(
-                  //         'Taux de conversion',
-                  //         style: TextStyle(
-                  //           fontSize: 18,
-                  //           fontWeight: FontWeight.bold,
-                  //         ),
-                  //       ),
-                  //       Expanded(
-                  //         child: SfRadialGauge(
-                  //           axes: <RadialAxis>[
-                  //             RadialAxis(
-                  //               minimum: 0,
-                  //               maximum: 100,
-                  //               startAngle: 180,
-                  //               endAngle: 0,
-                  //               ranges: <GaugeRange>[
-                  //                 GaugeRange(
-                  //                     startValue: 0,
-                  //                     endValue: 35,
-                  //                     color: Colors.red),
-                  //                 GaugeRange(
-                  //                     startValue: 35,
-                  //                     endValue: 70,
-                  //                     color: Colors.yellow),
-                  //                 GaugeRange(
-                  //                     startValue: 70,
-                  //                     endValue: 100,
-                  //                     color: Colors.green),
-                  //               ],
-                  //               pointers: <GaugePointer>[
-                  //                 NeedlePointer(
-                  //                     value: getRadialGaugeData().first.value),
-                  //               ],
-                  //               annotations: <GaugeAnnotation>[
-                  //                 GaugeAnnotation(
-                  //                   widget: Container(
-                  //                     child: Text(
-                  //                       '${getRadialGaugeData().first.value.toStringAsFixed(2)}%',
-                  //                       style: TextStyle(
-                  //                         fontSize: 16,
-                  //                         fontWeight: FontWeight.bold,
-                  //                       ),
-                  //                     ),
-                  //                   ),
-                  //                   angle: 0,
-                  //                   positionFactor: 0.5,
-                  //                 ),
-                  //               ],
-                  //             ),
-                  //           ],
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
 
-                  // Doughnut Chart
-                  // Container(
-                  //   height: 300,
-                  //   child: SfCircularChart(
-                  //     title: ChartTitle(
-                  //       text: 'Taux de conversion VS Taux de non conversion',
-                  //       textStyle: TextStyle(
-                  //         fontWeight: FontWeight.bold,
-                  //         color: Colors.black,
-                  //       ),
-                  //     ),
-                  //     legend: Legend(
-                  //       isVisible: true,
-                  //       overflowMode: LegendItemOverflowMode.wrap,
-                  //     ),
-                  //     series: <CircularSeries<_DoughnutData, String>>[
-                  //       DoughnutSeries<_DoughnutData, String>(
-                  //         dataSource: getDoughnutChartData(),
-                  //         xValueMapper: (_DoughnutData data, _) => data.label,
-                  //         yValueMapper: (_DoughnutData data, _) => data.value,
-                  //         dataLabelMapper: (_DoughnutData data, _) =>
-                  //             ' ${data.value.toStringAsFixed(2)}%',
-                  //         dataLabelSettings: DataLabelSettings(
-                  //           isVisible: true,
-                  //           textStyle: TextStyle(
-                  //             color: Colors.black,
-                  //           ),
-                  //         ),
-                  //         pointColorMapper: (_DoughnutData data, _) =>
-                  //             data.color,
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-
+                  // Bar Chart with Stacked Bar Graph
+                  Container(
+                    height: 300,
+                    child: SfCartesianChart(
+                      primaryXAxis: CategoryAxis(
+                        labelRotation: -60,
+                        interval: 1,
+                        labelIntersectAction: AxisLabelIntersectAction.none,
+                      ),
+                      title: ChartTitle(
+                        text: "Evolution de l'activation par canal",
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      legend: Legend(
+                        isVisible: true,
+                        overflowMode: LegendItemOverflowMode.wrap,
+                      ),
+                      tooltipBehavior: TooltipBehavior(enable: true),
+                      series:
+                          getBarChartDatac(), // Dynamically generated series
+                    ),
+                  ),
                   // Bar Chart
                   Container(
                     height: 300, // Increase the height of the bar chart
@@ -810,8 +874,8 @@ class Page2State extends State<Page2> {
                           dataSource: getBarChartData(),
                           xValueMapper: (_BarData sales, _) => sales.date,
                           yValueMapper: (_BarData sales, _) =>
-                              sales.nbrTransaction,
-                          name: 'Nbr Activation J',
+                              sales.nbrActivation,
+                          name: 'Nbr Activation Weekly',
                           color: Colors.blue,
                         ),
                         ColumnSeries<_BarData, String>(
@@ -819,35 +883,10 @@ class Page2State extends State<Page2> {
                           xValueMapper: (_BarData sales, _) => sales.date,
                           yValueMapper: (_BarData sales, _) =>
                               sales.nbrActivation,
-                          name: 'Nbr Activation',
+                          name: 'Nbr Activation Weekly-1',
                           color: Colors.orange,
                         ),
                       ],
-                    ),
-                  ),
-                  // Bar Chart with Stacked Bar Graph
-                  Container(
-                    height: 300,
-                    child: SfCartesianChart(
-                      primaryXAxis: CategoryAxis(
-                        labelRotation: -60,
-                        interval: 1,
-                        labelIntersectAction: AxisLabelIntersectAction.none,
-                      ),
-                      title: ChartTitle(
-                        text: 'Activation Groupée par Type et Date',
-                        textStyle: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      legend: Legend(
-                        isVisible: true,
-                        overflowMode: LegendItemOverflowMode.wrap,
-                      ),
-                      tooltipBehavior: TooltipBehavior(enable: true),
-                      series:
-                          getBarChartDatac(), // Dynamically generated series
                     ),
                   ),
                 ],
